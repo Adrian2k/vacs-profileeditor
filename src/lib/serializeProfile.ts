@@ -1,7 +1,8 @@
+import prettier from 'prettier/standalone'
+import prettierPluginBabel from 'prettier/plugins/babel'
+import prettierPluginEstree from 'prettier/plugins/estree'
+import type { Options as PrettierOptions } from 'prettier'
 import type { TabbedProfile, DirectAccessKey, DirectAccessPage } from '../types'
-
-const PRINT_WIDTH = 80
-const INDENT = '  '
 
 /**
  * Serialize a profile to JSON matching vacs-data Prettier format exactly.
@@ -10,61 +11,20 @@ const INDENT = '  '
  * Format: objects expanded (one prop per line), arrays compact when under 80 chars,
  * 2-space indent, LF, trailing newline.
  */
-export function serializeProfile(profile: TabbedProfile): string {
+// Match vacs-data Prettier/editorconfig defaults for JSON output.
+const PRETTIER_OPTIONS: PrettierOptions = {
+  parser: 'json',
+  plugins: [prettierPluginBabel, prettierPluginEstree],
+  printWidth: 50,
+  tabWidth: 2,
+  useTabs: false,
+  endOfLine: 'lf',
+}
+
+export async function serializeProfile(profile: TabbedProfile): Promise<string> {
   const obj = profileToJson(profile)
-  return format(obj, 0) + '\n'
-}
-
-function formatObject(obj: Record<string, unknown>, depth: number): string {
-  const entries = Object.entries(obj)
-  return entries
-    .map(([k, v], i) => {
-      const prefix = INDENT.repeat(depth + 1)
-      const keyStr = JSON.stringify(k) + ': '
-      const suffix = i < entries.length - 1 ? ',' : ''
-      if (v === null || typeof v !== 'object') {
-        return prefix + keyStr + JSON.stringify(v) + suffix
-      }
-      if (Array.isArray(v)) {
-        const hasObjects = v.some((x) => !isPrimitive(x))
-        if (!hasObjects) {
-          const compact = '[' + v.map((x) => formatInline(x)).join(', ') + ']'
-          if (compact.length <= PRINT_WIDTH - keyStr.length - prefix.length) {
-            return prefix + keyStr + compact + suffix
-          }
-        }
-        const arrLines = v.map((x, j) => {
-          const s = INDENT.repeat(depth + 2) + format(x, depth + 2)
-          return j < v.length - 1 ? s + ',' : s
-        })
-        return prefix + keyStr + '[\n' + arrLines.join('\n') + '\n' + prefix + ']' + suffix
-      }
-      return prefix + keyStr + '{\n' + formatObject(v as Record<string, unknown>, depth + 1) + '\n' + prefix + '}' + suffix
-    })
-    .join('\n')
-}
-
-function formatInline(val: unknown): string {
-  if (val === null || typeof val !== 'object') return JSON.stringify(val)
-  if (Array.isArray(val)) return '[' + val.map(formatInline).join(', ') + ']'
-  return JSON.stringify(val)
-}
-
-function isPrimitive(val: unknown): boolean {
-  return val === null || typeof val !== 'object'
-}
-
-function format(val: unknown, depth: number): string {
-  if (val === null || typeof val !== 'object') return JSON.stringify(val)
-  if (Array.isArray(val)) {
-    if (val.some((x) => !isPrimitive(x))) {
-      return '[\n' + val.map((x, i) => INDENT.repeat(depth + 1) + format(x, depth + 1) + (i < val.length - 1 ? ',' : '')).join('\n') + '\n' + INDENT.repeat(depth) + ']'
-    }
-    const compact = '[' + val.map((x) => formatInline(x)).join(', ') + ']'
-    if (compact.length <= PRINT_WIDTH) return compact
-    return '[\n' + val.map((x, i) => INDENT.repeat(depth + 1) + format(x, depth + 1) + (i < val.length - 1 ? ',' : '')).join('\n') + '\n' + INDENT.repeat(depth) + ']'
-  }
-  return '{\n' + formatObject(val as Record<string, unknown>, depth) + '\n' + INDENT.repeat(depth) + '}'
+  const json = JSON.stringify(obj, null, 2)
+  return await prettier.format(json, PRETTIER_OPTIONS)
 }
 
 function profileToJson(profile: TabbedProfile): Record<string, unknown> {

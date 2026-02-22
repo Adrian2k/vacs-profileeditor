@@ -465,8 +465,8 @@ export default function App() {
   }, [])
 
   const downloadProfile = useCallback(
-    (filename: string) => {
-      const json = serializeProfile(profile)
+    async (filename: string) => {
+      const json = await serializeProfile(profile)
       const blob = new Blob([json], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -480,7 +480,7 @@ export default function App() {
 
   const handleSaveAs = useCallback(() => {
     const name = window.prompt('Filename', `${profile.id}.json`)?.trim()
-    if (name) downloadProfile(name)
+    if (name) void downloadProfile(name)
   }, [downloadProfile, profile.id])
 
   const applyNewProfile = useCallback(() => {
@@ -496,9 +496,9 @@ export default function App() {
     setShowNewProfileConfirm(true)
   }, [])
 
-  const handleNewProfileSaveAndNew = useCallback(() => {
+  const handleNewProfileSaveAndNew = useCallback(async () => {
     setShowNewProfileConfirm(false)
-    downloadProfile(`${profile.id}.json`)
+    await downloadProfile(`${profile.id}.json`)
     applyNewProfile()
   }, [downloadProfile, profile.id, applyNewProfile])
 

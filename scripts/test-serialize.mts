@@ -59,7 +59,7 @@ async function main() {
         continue
       }
       const normalized = normalizeProfile(validated.profile)
-      const serialized = serializeProfile(normalized)
+      const serialized = await serializeProfile(normalized)
 
       let parsed: unknown
       try {
